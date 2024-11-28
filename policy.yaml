@@ -1,0 +1,15 @@
+policy_block:
+ - policy_id: 1001
+   name: "SQL Union Injection"
+   pattern: "UniOn"
+   option:
+    header: true
+    body: true
+    uri: true
+ - policy_id: 1002
+   name: "XSS Attack"
+   pattern: ".*script.*"
+   option:
+    header: true
+    body: true
+    uri: true
