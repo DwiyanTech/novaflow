@@ -4,7 +4,7 @@
 Novaflow is a cutting-edge virtual server-based Web Application Firewall (WAF) solution. Powered by asynchronous processing and the Tokio threading framework, Novaflow effortlessly manages large volumes of traffic while maintaining exceptional performance. What sets it apart is its ability to detect and mitigate web-based attacks in real-time, meticulously adhering to predefined security rules, ensuring robust protection for your digital infrastructure.
 
 ## Current state
-This tools is currently bete version (still need development new feature) but the main function is already done, need some feature like alert and traffic logging, custom arguments, healthcheck, reverse proxy, and dashboards
+This tools is currently beta version (still need development new feature) but the main function is already done, need some feature like alert and traffic logging, custom arguments, healthcheck, reverse proxy, and dashboards
 
 ## How to run
 Define the configuration `config.yaml` and `policy.yaml`
