@@ -41,3 +41,8 @@ policy_block:
 ```
 then run it into same folder in binary files 
 
+## Screenshots
+Screenshots: 
+![](https://raw.githubusercontent.com/DwiyanTech/novaflow/refs/heads/main/screenshot/ss_1.png)
+![](https://raw.githubusercontent.com/DwiyanTech/novaflow/refs/heads/main/screenshot/ss_3.png)
+![](https://raw.githubusercontent.com/DwiyanTech/novaflow/refs/heads/main/screenshot/ss_2.png)
