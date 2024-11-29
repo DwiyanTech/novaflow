@@ -13,3 +13,17 @@ policy_block:
     header: true
     body: true
     uri: true
+ - policy_id: 1002
+   name: "XSS Attack"
+   pattern: ".*script.*"
+   option:
+    header: true
+    body: true
+    uri: true
+ - policy_id: 1002
+   name: "XSS Attack"
+   pattern: ".*script.*"
+   option:
+    header: true
+    body: true
+    uri: true

@@ -12,8 +12,11 @@ mod request;
 
 #[tokio::main]
 pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-
-    // This address is localhost
+    println!(r#"
+Novaflow VirtualServer WAF Beta v1.0 by Dwiyantech
+This Version still beta test
+https://github.com/DwiyanTech/novaflow
+"#);
     let conf_policy = load_policy_config("policy.yaml").await.unwrap();
     let conf_policy_load_memoy = Arc::new(RwLock::new(conf_policy));
     let conf_server =  load_vs_config("config.yaml").await.unwrap();
@@ -36,7 +39,6 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 }))
                 .await
             {
-                println!("Error serving connection: {:?}", err);
             }
         });
     }
