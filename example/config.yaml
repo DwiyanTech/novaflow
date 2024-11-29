@@ -1,0 +1,9 @@
+listen_address: "0.0.0.0"
+listen_port: 9000
+virtual_server:
+  - name: Backend App 1
+    path: /backend1
+    remote_address: "http://0.0.0.0:3002"
+  - name: Backend App 2
+    path: /backend2
+    remote_address: "http://0.0.0.0:3001"

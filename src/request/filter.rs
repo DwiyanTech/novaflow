@@ -9,18 +9,36 @@ use crate::config::{PolicyConfig, RulesConfig};
 pub async fn check_rules(list_patterns : PolicyConfig, body : String,uri : String, header : HeaderMap ) -> Result<Vec<Option<RulesConfig>>,hyper::Error> {
         let check : Vec<_>= list_patterns.policy_block.into_iter().map(|obj| {
             let val_uri_clone = uri.clone();
+            println!("{}",val_uri_clone.clone());
             let header_uri_clone = header.clone();
             let body_clone = body.clone();
             task::spawn_blocking( move || {
-                if obj.option.uri {
-                    check_regex_pattern(obj, val_uri_clone)
-                } else if obj.option.header {
-                    check_header(obj, header_uri_clone)
-                } else if obj.option.body {
-                    check_regex_pattern(obj, body_clone)
-                } else {
-                None
-                }
+                let mut checked_val = false;
+                let obj_rules = obj.clone();
+                let obj_val = obj_rules.clone();
+                let mut match_regex: Option<RulesConfig> = None;
+                
+                if obj_rules.option.uri && !checked_val{
+                   match_regex = check_regex_pattern(obj_val.clone(), val_uri_clone);
+                   if match_regex.is_some()  {
+                    checked_val = true;
+                   }
+                } 
+                
+                 if obj_rules.option.header && !checked_val {
+                    match_regex = check_header(obj_val.clone(), header_uri_clone);
+                    if match_regex.is_some()  {
+                        checked_val = true;
+                       }
+                } 
+                 if obj_rules.option.body && !checked_val {
+                    match_regex = check_regex_pattern(obj_val.clone(), body_clone);
+                    if match_regex.is_some()  {
+                        checked_val = true;
+                       }
+                } 
+
+                match_regex
                  
             })
         }).collect();
