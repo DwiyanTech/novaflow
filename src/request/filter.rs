@@ -5,66 +5,67 @@ use tokio::task;
 
 use crate::config::{PolicyConfig, RulesConfig};
 
+use super::RequestData;
 
-pub async fn check_rules(list_patterns : PolicyConfig, body : String,uri : String, header : HeaderMap ) -> Result<Vec<Option<RulesConfig>>,hyper::Error> {
+
+pub async fn check_rules(list_patterns : PolicyConfig, req_data : RequestData ) -> Result<Vec<Option<RulesConfig>>,hyper::Error> {
         let check : Vec<_>= list_patterns.policy_block.into_iter().map(|obj| {
-            let val_uri_clone = uri.clone();
-            let header_uri_clone = header.clone();
-            let body_clone = body.clone();
+            let req_data = req_data.clone();
             task::spawn_blocking( move || {
-                let mut checked_val = false;
-                let obj_rules: RulesConfig = obj.clone();
-                let obj_val: RulesConfig = obj_rules.clone();
+                let body_string = String::from_utf8_lossy(&req_data.body).to_string().clone();
                 let mut match_regex: Option<RulesConfig> = None;
-                
-                if obj_rules.option.uri && !checked_val{
-                   match_regex = check_regex_pattern(obj_val.clone(), val_uri_clone);
-                   if match_regex.is_some()  {
-                    checked_val = true;
-                   }
-                } 
-                
-                 if obj_rules.option.header && !checked_val {
-                    match_regex = check_header(obj_val.clone(), header_uri_clone);
-                    if match_regex.is_some()  {
-                        checked_val = true;
-                       }
-                } 
-                 if obj_rules.option.body && !checked_val {
-                    match_regex = check_regex_pattern(obj_val.clone(), body_clone);
-                    if match_regex.is_some()  {
-                        checked_val = true;
-                       }
-                } 
-
-                match_regex
-                 
+                let checks = [
+                    (obj.option.header, check_header(obj.clone(), req_data.headers)),
+                    (obj.option.body, check_regex_pattern(obj.clone(), body_string)),
+                    (obj.option.uri, check_regex_pattern(obj.clone(), req_data.uri))
+                     ];
+        
+                     checks.iter().find_map(|(condition,res_val)| {
+                        if *condition {
+                            match res_val {
+                                Ok(Some(val)) => {
+                                    match_regex = Some(val.clone());
+                                    return Some(val.clone());
+                                }
+                                Ok(None) => {
+                                    return None;
+                                }
+                                Err(_) => {
+                                    return None;
+                                }
+                            }
+                        }
+                        None
+                     })
+         
             })
+
+
         }).collect();
         
         let results = future::join_all(check).await;
         Ok(results.into_iter().map(|res  | res.unwrap()).collect())
 }
-
- fn check_regex_pattern(obj : RulesConfig,val : String) -> Option<RulesConfig>{
+ 
+ fn check_regex_pattern(obj : RulesConfig,val : String)-> Result<Option<RulesConfig>, Box<dyn std::error::Error>> {
     let regex = Regex::new(&obj.pattern).unwrap();
     if let Some(_) = regex.find(&val) {
-        Some(obj)
+        Ok(Some(obj))
     } else {
-        None
+       Ok( None)
     }
 
 }
 
-fn check_header(obj : RulesConfig,header : HeaderMap) -> Option<RulesConfig> {
-    let mut matched_regex : Option<RulesConfig> = None;    
+fn check_header(obj : RulesConfig,header : HeaderMap) -> Result<Option<RulesConfig>, Box<dyn std::error::Error>> {
     for (key,value) in header.iter() {
-        let check_key_value : String = format!("{} : {}",key.to_string(),value.to_str().unwrap_or("").to_string());
-        matched_regex =  check_regex_pattern(obj.clone(), check_key_value);
-        if matched_regex.is_some() {
-            break;
+        let  convert_header_string = format!("{}: {}",key.to_string(),value.to_str()?);
+        if let Some(matched) = check_regex_pattern(obj.clone(),convert_header_string)? {
+            return Ok(Some(matched));
         }
     }
-    matched_regex
+
+    Ok(None)
+
 
 }
