@@ -1,8 +1,23 @@
 
+use hyper::{body::Bytes, HeaderMap, Method};
+
+
+
 pub mod handler;
 pub mod filter;
 
 
+#[derive(Clone)]
+pub struct RequestData {
+    body: Bytes,
+    headers : HeaderMap,
+    uri : String,
+    method : Method
+
+}
+
+
+static RULES_N_A : &str = "N/A";
 pub static  BLOCKED_REQUEST : &str = r#"
 
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">

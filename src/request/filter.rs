@@ -8,7 +8,7 @@ use crate::config::{PolicyConfig, RulesConfig};
 use super::RequestData;
 
 
-pub async fn check_rules(list_patterns : PolicyConfig, req_data : RequestData ) -> Result<Vec<Option<RulesConfig>>,hyper::Error> {
+ pub async fn check_rules(list_patterns : PolicyConfig, req_data : RequestData ) -> Result<Vec<Option<RulesConfig>>,hyper::Error> {
         let check : Vec<_>= list_patterns.policy_block.into_iter().map(|obj| {
             let req_data = req_data.clone();
             task::spawn_blocking( move || {

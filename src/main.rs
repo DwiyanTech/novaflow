@@ -12,7 +12,7 @@ mod request;
 
 #[tokio::main]
 pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    println!(r#"
+    tracing::info!(r#"
 Novaflow VirtualServer WAF Beta v1.0 by Dwiyantech
 This Version still beta test
 https://github.com/DwiyanTech/novaflow

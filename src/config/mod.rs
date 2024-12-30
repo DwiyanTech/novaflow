@@ -17,6 +17,7 @@ pub struct ServerConfig {
      pub virtual_server : Vec<VirtualServer>
 }
 
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct PolicyConfig {
      pub policy_block : Vec<RulesConfig>
