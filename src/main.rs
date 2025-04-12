@@ -53,10 +53,9 @@ async fn run(args : Cli) -> Result<()> {
         tracing_subscriber::registry().with(stdout_layer).with(logging_env).init();
     } else if logging_config.mode == "file" {
         tracing_subscriber::registry().with(file_layer).with(logging_env).init();
-   } else {
-      Err(anyhow!("Logging config not initialized, please choose between `stdout` or `file` mode "))
-
-   }
+    } else {
+     return Err(anyhow!("Logging config not initialized, please choose between `stdout` or `file` mode "))
+    }
 
     if server_config.ssl.enabled {
         match serve_tls(server_config, policy_config).await {
