@@ -1,21 +1,29 @@
-use std::sync::Arc;
 
 use serde::Deserialize;
-use tokio::sync::RwLock;
 
 pub mod load;
-
-
-pub type SharedPolicyConfig = Arc<RwLock<PolicyConfig>>;
-
-pub type SharedVSConfig = Arc<RwLock<ServerConfig>>;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct ServerConfig {
      pub listen_address : String,
      pub listen_port : i32,
-     pub virtual_server : Vec<VirtualServer>
+     pub ssl : SSLServer,
+     pub logging: LoggingConfig,
+     pub virtual_server : Vec<VirtualServer>,
+     pub domain_config : Vec<DomainServer>
+     
 }
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct LoggingConfig {
+     pub mode : String,
+     pub trace_traffic : bool,
+     pub file_directory : String,
+     pub file_name : String,
+     
+
+} 
+
 
 
 #[derive(Debug, Deserialize, Clone)]
@@ -43,4 +51,18 @@ pub struct VirtualServer {
     pub name : String,
     pub path : String,
     pub remote_address : String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct DomainServer {
+    pub name : String,
+    pub domain_name : String,
+    pub remote_address : String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct SSLServer {
+    pub enabled : bool,
+    pub ca_path : String,
+    pub key_path : String,
 }

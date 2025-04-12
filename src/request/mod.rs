@@ -9,23 +9,22 @@ pub mod filter;
 
 #[derive(Clone)]
 pub struct RequestData {
-    body: Bytes,
-    headers : HeaderMap,
-    uri : String,
-    method : Method
+    pub body: Bytes,
+    pub headers : HeaderMap,
+    pub uri : String,
+    pub method : Method
 
 }
 
 
-static RULES_N_A : &str = "N/A";
-pub static  BLOCKED_REQUEST : &str = r#"
+pub static BLOCKED_REQUEST : &str = r#"
 
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
 <html><head>
 <title>403 Forbidden</title>
 </head><body>
 <h1>Forbidden</h1>
-<p>Your Request has blocked, please contact your administrator if this marked as false positive</p>
+<p>Your Request has blocked, please contact your administrator if this marked as false positive RequestID REPLACE_WITH_UUID_REQUESTS</p>
 <hr>
 <address>Powered by <a href="https://github.com/DwiyanTech/novaflow">Novaflow</a></address>
 </body></html>
@@ -34,7 +33,6 @@ pub static  BLOCKED_REQUEST : &str = r#"
 
 
 pub static  BAD_GATEWAY : &str = r#"
-
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
 <html><head>
 <title>503 Bad Gateway</title>

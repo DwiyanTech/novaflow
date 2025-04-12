@@ -12,13 +12,30 @@ Define the configuration `config.yaml` and `policy.yaml`
 ```
 listen_address: "0.0.0.0"
 listen_port: 9000
+ssl:
+  enabled: true
+  ca_path: "/path/to/ca.pem"
+  key_path: "/path/to/key.pem"
+logging:
+  mode: "file"
+  trace_traffic: true
+  file_path: "/var/log/"
+  file_name: "novaflow.log"
+domain_server:
+  enabled: true
+  config:
+    - name: domain_1
+      domain_name: dwiyantech.com
+      remote_address: "http://10.66.66.6"
 virtual_server:
-  - name: Backend App 1
-    path: /backend1
-    remote_address: "http://10.66.66.6"
-  - name: Backend App 2
-    path: /backend2 # path that define path define virtual host
-    remote_address: "http://0.0.0.0:3001" # virtual host that mapped into path
+  enabled: true
+  config:
+    - name: Backend App 1
+      path: /backend1
+      remote_address: "http://example.com"
+    - name: Backend App 2 # dd
+      path: /backend2
+      remote_address: "http://0.0.0.0:3001"
 ```
 - `policy.yaml` : WAF rules with Rust Regex Match
 ```
