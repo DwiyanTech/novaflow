@@ -75,3 +75,14 @@ novaflow -c ./example/config.yaml -p ./example/policy.yaml
 - Run with many 2 or more policy files 
 
 - Add docs site
+
+## Screenshot
+
+- SSL Certs and with Domain
+![](https://raw.githubusercontent.com/DwiyanTech/novaflow/refs/heads/main/screenshot/ss_certs_works.png)
+- Log with Request ID
+![](https://raw.githubusercontent.com/DwiyanTech/novaflow/refs/heads/main/screenshot/ss_logwith_requestid.png)
+![](https://raw.githubusercontent.com/DwiyanTech/novaflow/refs/heads/main/screenshot/ss_blocked.png)
+- Working with VS
+![](https://raw.githubusercontent.com/DwiyanTech/novaflow/refs/heads/main/screenshot/ss_logwith_requestid.png)
+![](https://raw.githubusercontent.com/DwiyanTech/novaflow/refs/heads/main/screenshot/ss_withvs.png)
