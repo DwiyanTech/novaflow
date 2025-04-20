@@ -84,5 +84,4 @@ novaflow -c ./example/config.yaml -p ./example/policy.yaml
 ![](https://raw.githubusercontent.com/DwiyanTech/novaflow/refs/heads/main/screenshot/ss_logwith_requestid.png)
 ![](https://raw.githubusercontent.com/DwiyanTech/novaflow/refs/heads/main/screenshot/ss_blocked.png)
 - Working with VS
-![](https://raw.githubusercontent.com/DwiyanTech/novaflow/refs/heads/main/screenshot/ss_logwith_requestid.png)
 ![](https://raw.githubusercontent.com/DwiyanTech/novaflow/refs/heads/main/screenshot/ss_withvs.png)
