@@ -9,8 +9,8 @@ pub struct ServerConfig {
      pub listen_port : i32,
      pub ssl : SSLServer,
      pub logging: LoggingConfig,
-     pub virtual_server : Vec<VirtualServer>,
-     pub domain_config : Vec<DomainServer>
+     pub virtual_server : VirtualServerConfig,
+     pub domain_server : DomainServerConfig
      
 }
 
@@ -18,12 +18,25 @@ pub struct ServerConfig {
 pub struct LoggingConfig {
      pub mode : String,
      pub trace_traffic : bool,
-     pub file_directory : String,
+     pub file_path : String,
      pub file_name : String,
      
-
 } 
 
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct VirtualServerConfig {
+     pub enabled : bool,
+     pub config : Vec<VirtualServer>     
+} 
+
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct DomainServerConfig {
+    pub enabled : bool,
+    pub config : Vec<DomainServer>     
+     
+} 
 
 
 #[derive(Debug, Deserialize, Clone)]

@@ -1,28 +1,28 @@
 policy_block:
  - policy_id: 1001
-   name: "SQL Union Injection"
-   pattern: "UniOn"
+   name: "XSS Attack Malicious Keyword"
+   pattern: "(?i)on(blur|change|click|focus|keydown|keypress|keyup|load|mouse(down|up|over|out|move)|reset|select|submit|unload)\\s*="
    option:
     header: true
     body: true
     uri: true
  - policy_id: 1002
    name: "XSS Attack"
-   pattern: ".*script.*"
+   pattern: "(?i)<script[^>]*>"
    option:
     header: true
     body: true
     uri: true
- - policy_id: 1002
-   name: "XSS Attack"
-   pattern: ".*script.*"
+ - policy_id: 1003
+   name: "SQL Injection"
+   pattern: "(?i)<script[^>]*>"
    option:
     header: true
     body: true
     uri: true
- - policy_id: 1002
-   name: "XSS Attack"
-   pattern: ".*script.*"
+ - policy_id: 1004
+   name: "Local File Inclusions on Sensitive Files"
+   pattern: "(?i)(etc/passwd|boot.ini|win.ini)"
    option:
     header: true
     body: true

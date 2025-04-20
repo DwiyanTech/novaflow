@@ -4,12 +4,13 @@ use std::{fs::File, io::BufReader, process::ExitCode, sync::Arc};
 use anyhow::{anyhow, Ok, Result};
 use clap::Parser;
 use config::{ PolicyConfig, ServerConfig};
-use hyper::{ server::conn::http1, service::service_fn};
+use hyper::{ server::conn::http2, service::service_fn};
 use hyper_util::rt::{TokioIo, TokioTimer};
 use request::handler::request_handler;
 use tokio::net::TcpListener;
 use tokio_rustls::TlsAcceptor;
-use tracing_subscriber::{filter, layer::SubscriberExt, util::SubscriberInitExt, Layer};
+use tracing::Level;
+use tracing_subscriber::{filter,  layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
 
 mod config;
@@ -23,14 +24,15 @@ mod domain;
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    #[arg(short = 'c', long, default_value = "config.yaml")]
+    #[arg(short = 'c', long)]
     config: String,
-    #[arg(short = 'p', long, default_value = "policy.yaml")]
+    #[arg(short = 'p', long)]
     policy: String
 }
 
 #[tokio::main]
 async fn main() -> ExitCode {
+    
     match run(Cli::parse()).await {
         std::result::Result::Ok(_) => ExitCode::SUCCESS,
         std::result::Result::Err(_) => ExitCode::FAILURE
@@ -39,25 +41,25 @@ async fn main() -> ExitCode {
 }
 
 async fn run(args : Cli) -> Result<()> {
-    let server_config  = ServerConfig::load_server_config(&args.config).await?;
-    let policy_config = PolicyConfig::load_policy_config(&args.policy).await?;
-    let logging_config = server_config.clone().logging;
-    
 
-    let file_layer  = json_subscriber::fmt::layer().with_current_span(false).with_writer(logging_config.output_tofile());
-    let stdout_layer  = json_subscriber::fmt::layer().with_writer(logging_config.output_stdout());
-    let logging_env = tracing_subscriber::fmt::layer().with_filter(filter::LevelFilter::from_level(logging_config.is_tafficlogging()));
-    
-    
-    if logging_config.mode == "stdout" {
-        tracing_subscriber::registry().with(stdout_layer).with(logging_env).init();
-    } else if logging_config.mode == "file" {
-        tracing_subscriber::registry().with(file_layer).with(logging_env).init();
-    } else {
-     return Err(anyhow!("Logging config not initialized, please choose between `stdout` or `file` mode "))
-    }
+    let server_config  = ServerConfig::load_server_config(&args.config).await?;
+    let logging_config = server_config.clone().logging;
+    let file_layer: json_subscriber::fmt::Layer<tracing_subscriber::Registry, tracing_appender::non_blocking::NonBlocking>  = json_subscriber::fmt::layer().with_current_span(false).with_writer(logging_config.output_stdout());
+    let logging_env = tracing_subscriber::fmt::layer().with_filter(filter::LevelFilter::from_level(Level::TRACE));
+
+    tracing_subscriber::registry().with(file_layer).with(logging_env).init();
+
+
+
+    let policy_config: PolicyConfig = PolicyConfig::load_policy_config(&args.policy).await?;
+
+    tracing::info!("Novaflow WAF Beta V.0.1.0 - Dwiyantech");
+
+    tracing::info!("https://github.com/DwiyanTech/novaflow");
+
 
     if server_config.ssl.enabled {
+
         match serve_tls(server_config, policy_config).await {
             std::result::Result::Ok(_) => {
                 Ok(())
@@ -66,7 +68,8 @@ async fn run(args : Cli) -> Result<()> {
              Err(e)
            }
         }
-    } else { 
+    } else {
+
         match serve_http(server_config, policy_config).await {
             std::result::Result::Ok(_) => {
                 Ok(())
@@ -85,7 +88,6 @@ async fn serve_tls(server_config : ServerConfig,policy_conf : PolicyConfig) -> R
     let serverconf = server_config.clone();
     let cert_file = File::open(server_config.ssl.ca_path);
     let key_file  = File::open(server_config.ssl.key_path);
-
     if cert_file.is_ok() && key_file.is_ok() {
         let mut cert_byte = BufReader::new(cert_file.unwrap());
         let mut key_byte = BufReader::new(key_file.unwrap());
@@ -105,7 +107,12 @@ async fn serve_tls(server_config : ServerConfig,policy_conf : PolicyConfig) -> R
                 let addr = format!("{}:{}",server_config.listen_address,server_config.listen_port);
                 let addr_clone = addr.clone();    
                 tracing::info!("Listen on Address {}",addr_clone);
-                let listener = TcpListener::bind(addr).await?;
+                let listener_await = TcpListener::bind(addr).await;
+                if let Err(err) = listener_await {
+                    tracing::error!("Error when setup Connection Lisener : {}",err);
+                    return Err(anyhow!("Error when setup Connection Lisener : {}",err));
+                }
+                let listener = listener_await?;
                 loop {            
                     let serverconf_loop = clone_serverconfig.clone();
                     let policyconf_loop = clone_policy_confog.clone();
@@ -118,19 +125,23 @@ async fn serve_tls(server_config : ServerConfig,policy_conf : PolicyConfig) -> R
 
                       let stream_tls =   match tls_acceptor.accept(tcp).await {
                             std::result::Result::Ok(stream) => stream,
-                            std::result::Result::Err(_) => {
+                            std::result::Result::Err(err) => {
+                                tracing::error!("Error when setup stream TLS : {}",err);
+
                                return;
                             } 
                         };
 
                         let tokio_io = TokioIo::new(stream_tls);
-                        if let Err(_) = http1::Builder::new()
+                        
+                        if let Err(err) = http2::Builder::new(request::TokioExecutor)
                         .timer(TokioTimer::new())
                         .serve_connection(tokio_io, service_fn(move |req| {
                             request_handler(req,serverconf_move.clone(),policyconf_move.clone(),remote_addr)
                         }))
                         .await {
-                            
+                            tracing::error!("Error when setup Connection TLS : {}",err);
+
                         }
             
                     });
@@ -138,11 +149,21 @@ async fn serve_tls(server_config : ServerConfig,policy_conf : PolicyConfig) -> R
                 }
 
             },
-            std::result::Result::Err(_) => {
+            std::result::Result::Err(err) => {
+                tracing::error!("Error when setup TLS : {}",err)
 
             }
         }
 
+    } else {
+
+        if let Err(err) = cert_file  {
+            tracing::error!("Error when open Cert File, check your Cert : {}",err)
+        }
+
+        if let Err(err) = key_file  {
+            tracing::error!("Error when open Key File, check your key : {}",err)
+        }
     }
 
     Ok(())   
@@ -165,7 +186,7 @@ async fn serve_http(server_config : ServerConfig,policy_conf : PolicyConfig) -> 
         tokio::task::spawn(async move {
             let policyconf_move = policyconf_loop.clone();
             let serverconf_move = serverconf_loop.clone();
-            if let Err(_) = http1::Builder::new()
+            if let Err(_) = http2::Builder::new(request::TokioExecutor)
             .timer(TokioTimer::new())
             .serve_connection(io, service_fn(move |req| {
                 request_handler(req,serverconf_move.clone(),policyconf_move.clone(),remote_addr)
@@ -178,3 +199,5 @@ async fn serve_http(server_config : ServerConfig,policy_conf : PolicyConfig) -> 
         
     }
 }
+
+

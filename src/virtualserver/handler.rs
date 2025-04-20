@@ -87,6 +87,7 @@ pub async fn virtual_server_handler(
             }
         }
     } else {
+        
         tracing::trace!(
             remote_addr = ?remote_addr,
             uri = ?request_data.uri,

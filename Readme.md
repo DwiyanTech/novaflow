@@ -6,60 +6,72 @@ Novaflow is a cutting-edge virtual server-based Web Application Firewall (WAF) s
 ## Current state
 This tools is currently beta version (still need development new feature) but the main function is already done, need some feature like alert and traffic logging, custom arguments, healthcheck, reverse proxy, and dashboards
 
-## How to run
-Define the configuration `config.yaml` and `policy.yaml`
-- `config.yaml` : VirtualServer configuration and listener configuration
+
+## List All Available Commands
+```bash
+Usage: novaflow [OPTIONS]
+
+Options:
+  -c, --config <CONFIG>  [default: config.yaml]
+  -p, --policy <POLICY>  [default: policy.yaml]
+  -h, --help             Print help
+  -V, --version          Print version
 ```
+## Features
+
+- Support TLS
+- Regex Support
+- Domain Based configuration
+- Virtual Server Based configuration
+- Healthcheck
+
+
+## List Example Configurations
+Novaflow appears to be a Web Application Firewall (WAF) solution that is distributed as a single binary, simplifying its deployment and operation, here for all available arguments below :
+```yaml
 listen_address: "0.0.0.0"
 listen_port: 9000
 ssl:
   enabled: true
-  ca_path: "/path/to/ca.pem"
-  key_path: "/path/to/key.pem"
+  ca_path: "example/sample.pem"
+  key_path: "example/sample.rsa"
 logging:
-  mode: "file"
+  mode: "stdout"
   trace_traffic: true
-  file_path: "/var/log/"
-  file_name: "novaflow.log"
+  file_path: ""
+  file_name: ""
 domain_server:
   enabled: true
   config:
     - name: domain_1
-      domain_name: dwiyantech.com
-      remote_address: "http://10.66.66.6"
+      domain_name: testserver.com
+      remote_address: "http://1.1.1.1"
 virtual_server:
   enabled: true
   config:
-    - name: Backend App 1
+    - name: "Backend1"
       path: /backend1
-      remote_address: "http://example.com"
-    - name: Backend App 2 # dd
-      path: /backend2
-      remote_address: "http://0.0.0.0:3001"
+      remote_address: "https://www.example.com/"
 ```
-- `policy.yaml` : WAF rules with Rust Regex Match
-```
-policy_block:
- - policy_id: 1001 # policy id
-   name: "XSS Attack # Rule name
-   pattern: ".*script.*" # Regex match rules to block
-   option: #  option for what request to check
-    header: true # check header
-    body: true # check body
-    uri: true # check uri
- - policy_id: 1002
-   name: "SQL Union Injection"
-   pattern: "UniOn"
-   option:
-    header: true
-    body: true
-    uri: true
+For complete guide see under example folder
 
-```
-then run it into same folder in binary files 
 
-## Screenshots
-Screenshots: 
-![](https://raw.githubusercontent.com/DwiyanTech/novaflow/refs/heads/main/screenshot/ss_1.png)
-![](https://raw.githubusercontent.com/DwiyanTech/novaflow/refs/heads/main/screenshot/ss_3.png)
-![](https://raw.githubusercontent.com/DwiyanTech/novaflow/refs/heads/main/screenshot/ss_2.png)
+## Run Locally
+
+Download binary then mapped into configuration files (see example folder)
+```bash
+novaflow -c ./example/config.yaml -p ./example/policy.yaml
+```
+
+
+## Roadmap
+
+- Add output to file feature
+
+- Add Logging configuration more flexible
+
+- Seperate Alerts and Block policy rules
+
+- Run with many 2 or more policy files 
+
+- Add docs site

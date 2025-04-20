@@ -5,7 +5,7 @@ use http_body_util::Full;
 use hyper::{body::Bytes, Response, StatusCode};
 use reqwest::Client;
 
-use crate::{config::DomainServer, request::{self, RequestData}, response::convert::convert_reqwest_to_hyper_response};
+use crate::{config::DomainServer, request::{self, RequestData, BAD_GATEWAY}, response::convert::convert_reqwest_to_hyper_response};
 
 
 
@@ -15,9 +15,7 @@ pub async fn domain_handler(
     source_ip: IpAddr,
     uuid: String
 ) -> Result<Response<Full<Bytes>>> {
-    if let Some(host_header) = request_data.headers.get("Host") {
-        let string_host_header = host_header.to_str()?;
-        if let Some(domain) = domain_conf.iter().find(|domain_server| string_host_header == domain_server.domain_name) {
+        if let Some(domain) = domain_conf.iter().find(|domain_server| request_data.host == domain_server.domain_name) {
             let format_full_uri = format!("{}{}",domain.remote_address,request_data.uri);
             let request_to_uri = Client::new();
             let request_data_cloned = request_data.clone();
@@ -45,6 +43,7 @@ pub async fn domain_handler(
                             }
                             std::result::Result::Err(err) => {
                                 let error = format!("Error when send requests : {}",err.to_string());
+                                let bad_gw = BAD_GATEWAY.replace("REPLACE_WITH_UUID_REQUESTS", &uuid);
 
                                 tracing::trace!(
                                     remote_addr = ?source_ip,
@@ -58,7 +57,7 @@ pub async fn domain_handler(
                                 );
                                 return Ok(Response::builder()
                                     .status(StatusCode::BAD_GATEWAY)
-                                    .body(Full::new(Bytes::from(request::BAD_GATEWAY)))
+                                    .body(Full::new(Bytes::from(bad_gw)))
                                     .unwrap());
                             }
                         }
@@ -92,10 +91,7 @@ pub async fn domain_handler(
         }
         
 
-    } else {
-            Err(anyhow!("not found requests in domain"))
-    }
+    } 
 
     
     
-}
