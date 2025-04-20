@@ -2,10 +2,10 @@ listen_address: "0.0.0.0"
 listen_port: 9000
 ssl:
   enabled: true
-  ca_path: "/Users/dwiyan/dwyn-project/dwiyan-projects/certs/sample.pem"
-  key_path: "/Users/dwiyan/dwyn-project/dwiyan-projects/certs/sample.rsa"
+  ca_path: "example/sample.pem"
+  key_path: "example/sample.rsa"
 logging:
-  mode: "lll"
+  mode: "stdout"
   trace_traffic: true
   file_path: "/tmp/"
   file_name: "novaflow.log"
