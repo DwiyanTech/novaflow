@@ -15,7 +15,7 @@ policy_block:
     uri: true
  - policy_id: 1003
    name: "SQL Injection"
-   pattern: "(?i)<script[^>]*>"
+   pattern: "(?i)(SELECT|INSERT|UPDATE|DELETE|UNION|DROP|TRUNCATE|ALTER|EXEC|DECLARE)"
    option:
     header: true
     body: true
