@@ -109,8 +109,8 @@ novaflow -c ./example/config.yaml -p ./example/policy.yaml
 ## Admin API
 
 NovaFlow exposes management endpoints under `/novaflow/` that are routed
-**before** WAF inspection so health checks and the dashboard remain reachable
-even when traffic would otherwise be blocked.
+**before** WAF inspection so health checks and management tooling remain
+reachable even when traffic would otherwise be blocked.
 
 | Endpoint | Method | Description |
 |---|---|---|
@@ -120,53 +120,8 @@ even when traffic would otherwise be blocked.
 | `/novaflow/api/policy` | GET | Current `PolicyConfig` (detection + rules) |
 | `/novaflow/api/policy` | POST | Validate YAML, persist to disk, and reload the engine live |
 
-All API responses include CORS headers so the dashboard dev server can call
-them cross-origin.
-
-## Documentation
-
-Full documentation lives in `docs/` and is built with [Mintlify](https://mintlify.com/).
-
-```bash
-cd docs
-npx mintlify dev
-```
-
-See `docs/README.md` for details.
-
-## SvelteForge Admin Dashboard
-
-A management UI based on [SvelteForge Admin](https://github.com/ColorlibHQ/svelteforge-admin)
-lives in `dashboard/`. It runs as a separate Node service and talks to the
-Rust admin API.
-
-### Start the dashboard
-
-```bash
-cd dashboard
-npx pnpm@10.28.1 install
-npx pnpm@10.28.1 dev
-```
-
-The dashboard defaults to `http://localhost:5173` and expects the NovaFlow API
-at `http://localhost:9000`. Override with `NOVAFLOW_API_URL` in `dashboard/.env`.
-
-### Dashboard pages
-
-- **NovaFlow Health** — engine status and per-upstream probe results
-- **NovaFlow Rules** — view and edit `policy.yaml`, then reload the engine
-- **NovaFlow Config** — read-only view of server/proxy configuration
-
-### Production build
-
-```bash
-cd dashboard
-npx pnpm@10.28.1 build
-node build
-```
-
-The template uses `@sveltejs/adapter-node`, so `node build` starts the
-standalone dashboard server.
+All API responses include CORS headers so an admin UI served from another
+origin can call the API cross-origin.
 
 ## Logging
 
@@ -182,6 +137,35 @@ logging:
 - `stdout` — blocking JSON lines to stdout
 - `file` — daily rolling file (`<file_path>/<file_name>.YYYY-MM-DD`)
 - `syslog` — local syslog daemon via `/dev/log` with tag `novaflow`
+
+## Tracing and metrics (OpenTelemetry)
+
+NovaFlow can export **OTLP/HTTP traces and metrics** to any compatible
+backend (OpenTelemetry Collector, Jaeger, Tempo, Grafana...). Telemetry is
+disabled by default; when it is off, every instrumentation call site is a
+cheap no-op and no exporter is built.
+
+```yaml
+otel:
+  enabled: true
+  endpoint: "http://localhost:4318"   # OTLP/HTTP receiver
+  service_name: "novaflow"
+  sample_ratio: 1.0                   # parent-based head sampling, 0.0–1.0
+```
+
+- Traces are batched to `<endpoint>/v1/traces`, metrics are pushed every
+  reader interval to `<endpoint>/v1/metrics`.
+- Every proxied request produces an `http.request` span (`request_id`,
+  `method`, `uri`) with a `waf.inspect` child span covering the WAF
+  evaluation.
+- Metrics (all prefixed `novaflow.`):
+  - `http.request.duration` (ms histogram) and `http.request.count`,
+    labelled `method`, `status`, `action` (`allowed`/`detected`/`blocked`)
+  - `waf.inspection.duration` (ms histogram), labelled `blocked`
+  - `upstream.request.duration` (ms histogram) and `upstream.request.count`,
+    labelled `upstream`, `status`, `success`
+- The tracer and meter are built once at startup — changing `otel:`
+  requires a restart.
 
 ## Tests
 
