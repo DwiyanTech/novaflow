@@ -1,0 +1,4 @@
+# tracing gates its `valuable` support (incl. `impl Value for valuable::Value`)
+# behind the `tracing_unstable` cfg; it must be set for all crates in the build.
+[build]
+rustflags = ["--cfg", "tracing_unstable"]

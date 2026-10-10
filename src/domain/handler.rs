@@ -1,97 +1,130 @@
-use std::net::IpAddr;
+use std::{net::IpAddr, time::Instant};
 
-use anyhow::{anyhow, Ok, Result};
+use anyhow::{anyhow, Result};
 use http_body_util::Full;
 use hyper::{body::Bytes, Response, StatusCode};
-use reqwest::Client;
+use tracing::Instrument;
 
-use crate::{config::DomainServer, request::{self, RequestData, BAD_GATEWAY}, response::convert::convert_reqwest_to_hyper_response};
+use crate::{
+    config::{DomainServer, ServerConfig},
+    proxy,
+    request::handler::{forwarded_headers, strip_hop_by_hop},
+    request::{bad_gateway_page, RequestData},
+    response::convert::convert_reqwest_to_hyper_response,
+    telemetry,
+};
 
-
-
+/// Route by the request's Host header (domain-based mode).
+///
+/// Matching is case-insensitive and supports leading-dot wildcard entries
+/// (`domain_name: .example.com` matches `www.example.com`). Returns Err
+/// when no domain matches so the caller can fall back to virtual servers.
 pub async fn domain_handler(
     domain_conf: Vec<DomainServer>,
-    request_data: RequestData,
+    request_data: &RequestData,
     source_ip: IpAddr,
-    uuid: String
+    uuid: &str,
+    server_config: &ServerConfig,
 ) -> Result<Response<Full<Bytes>>> {
-        if let Some(domain) = domain_conf.iter().find(|domain_server| request_data.host == domain_server.domain_name) {
-            let format_full_uri = format!("{}{}",domain.remote_address,request_data.uri);
-            let request_to_uri = Client::new();
-            let request_data_cloned = request_data.clone();
-            let req_to_addr = request_to_uri
-                .request(request_data.method, format_full_uri)
-                .headers(request_data.headers)
-                .body(request_data.body);
+    let host = request_data.host.to_lowercase();
 
-                match req_to_addr.send().await {
-                    std::result::Result::Ok(resp) => {
-                        match convert_reqwest_to_hyper_response(resp).await {
-                            std::result::Result::Ok(hyper_resp) => {
-                                let status: StatusCode = hyper_resp.status();
-                                tracing::trace!(
-                                    remote_addr = ?source_ip,
-                                    uri = ?request_data_cloned.uri,
-                                    method = ?request_data_cloned.method,
-                                    headers = ?request_data_cloned.headers,
-                                    request_id = ?uuid,
-                                    domain = ?domain.name,
-                                    response_code = ?status,
-                                    "Accepted request"
-                                );
-                                return Ok(hyper_resp);
-                            }
-                            std::result::Result::Err(err) => {
-                                let error = format!("Error when send requests : {}",err.to_string());
-                                let bad_gw = BAD_GATEWAY.replace("REPLACE_WITH_UUID_REQUESTS", &uuid);
-
-                                tracing::trace!(
-                                    remote_addr = ?source_ip,
-                                    uri = ?request_data_cloned.uri,
-                                    method = ?request_data_cloned.method,
-                                    headers = ?request_data_cloned.headers,
-                                    request_id = ?uuid,
-                                    domain = ?domain.name,
-                                    response_code = ?StatusCode::BAD_GATEWAY,
-                                    error
-                                );
-                                return Ok(Response::builder()
-                                    .status(StatusCode::BAD_GATEWAY)
-                                    .body(Full::new(Bytes::from(bad_gw)))
-                                    .unwrap());
-                            }
-                        }
-                    }
-                    Err(err) => {
-                        let error = format!("{}",err.to_string());
-                        tracing::trace!(
-                            remote_addr = ?source_ip,
-                            uri = ?request_data_cloned.uri,
-                            method = ?request_data_cloned.method,
-                            headers = ?request_data_cloned.headers,
-                            request_id = ?uuid,
-                            error
-                        );
-                        Err(anyhow!("Domain Not Found"))
-                    }
-                }
-            } else {
-                tracing::trace!(
-                    remote_addr = ?source_ip,
-                    uri = ?request_data.uri,
-                    method = ?request_data.method,
-                    headers = ?request_data.headers,
-                    request_id = ?uuid,
-                    response_code = ?StatusCode::NOT_FOUND,
-                    "Not Found"
-                );
-        
-                Err(anyhow!("Domain Not Found"))
-
+    let matched = domain_conf.iter().find(|d| {
+        let want = d.domain_name.to_lowercase();
+        if let Some(suffix) = want.strip_prefix('.') {
+            host == suffix || host.ends_with(&format!(".{suffix}")) || host.ends_with(&want)
+        } else {
+            host == want
         }
-        
+    });
 
-    } 
+    let Some(domain) = matched else {
+        return Err(anyhow!("no domain matched"));
+    };
 
-    
-    
+    let base = domain.remote_address.trim_end_matches('/');
+    let path = if request_data.uri.starts_with('/') {
+        request_data.uri.clone()
+    } else {
+        format!("/{}", request_data.uri)
+    };
+    let upstream_url = match &request_data.query {
+        Some(q) if !q.is_empty() => format!("{base}{path}?{q}"),
+        _ => format!("{base}{path}"),
+    };
+
+    let headers = forwarded_headers(&strip_hop_by_hop(request_data.headers.clone()), source_ip);
+
+    let upstream_start = Instant::now();
+    let resp = async {
+        proxy::client()
+            .request(request_data.method.clone(), upstream_url)
+            .headers(headers)
+            .body(request_data.body.clone())
+            .send()
+            .await
+    }
+    .instrument(tracing::info_span!("upstream.request", upstream = %domain.name))
+    .await;
+
+    match resp {
+        std::result::Result::Ok(resp) => {
+            let upstream_status = resp.status().as_u16();
+            match convert_reqwest_to_hyper_response(resp).await {
+                std::result::Result::Ok(hyper_resp) => {
+                    telemetry::record_upstream(
+                        upstream_start.elapsed(),
+                        &domain.name,
+                        Some(upstream_status),
+                    );
+                    let status: StatusCode = hyper_resp.status();
+                    tracing::trace!(
+                        remote_addr = ?source_ip,
+                        uri = ?request_data.uri,
+                        method = ?request_data.method,
+                        request_id = ?uuid,
+                        domain = ?domain.name,
+                        response_code = ?status,
+                        "Accepted request"
+                    );
+                    Ok(hyper_resp)
+                }
+                std::result::Result::Err(err) => {
+                    telemetry::record_upstream(
+                        upstream_start.elapsed(),
+                        &domain.name,
+                        Some(upstream_status),
+                    );
+                    tracing::warn!(
+                        remote_addr = ?source_ip,
+                        uri = ?request_data.uri,
+                        request_id = ?uuid,
+                        domain = ?domain.name,
+                        error = %err,
+                        "upstream response conversion failed"
+                    );
+                    let bad_gw = bad_gateway_page(server_config, uuid);
+                    Ok(Response::builder()
+                        .status(StatusCode::BAD_GATEWAY)
+                        .body(Full::new(Bytes::from(bad_gw)))
+                        .unwrap())
+                }
+            }
+        }
+        std::result::Result::Err(err) => {
+            telemetry::record_upstream(upstream_start.elapsed(), &domain.name, None);
+            tracing::warn!(
+                remote_addr = ?source_ip,
+                uri = ?request_data.uri,
+                request_id = ?uuid,
+                domain = ?domain.name,
+                error = %err,
+                "upstream request failed"
+            );
+            let bad_gw = bad_gateway_page(server_config, uuid);
+            Ok(Response::builder()
+                .status(StatusCode::BAD_GATEWAY)
+                .body(Full::new(Bytes::from(bad_gw)))
+                .unwrap())
+        }
+    }
+}

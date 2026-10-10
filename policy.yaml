@@ -1,29 +1,393 @@
-policy_block:
- - policy_id: 1001
-   name: "SQL Union Injection"
-   pattern: "UniOn"
-   option:
-    header: true
-    body: true
-    uri: true
- - policy_id: 1002
-   name: "XSS Attack"
-   pattern: ".*script.*"
-   option:
-    header: true
-    body: true
-    uri: true
- - policy_id: 1002
-   name: "XSS Attack"
-   pattern: ".*script.*"
-   option:
-    header: true
-    body: true
-    uri: true
- - policy_id: 1002
-   name: "XSS Attack"
-   pattern: ".*script.*"
-   option:
-    header: true
-    body: true
-    uri: true
+detection:
+  mode: block
+  anomaly_threshold: 5
+  max_body_bytes: 1048576
+rules:
+  sqli:
+    enabled: true
+    keywords:
+      policy_id: 1009
+      items:
+        - name: select
+          score: 5
+        - name: union
+          score: 5
+        - name: insert
+          score: 5
+        - name: update
+          score: 5
+        - name: delete
+          score: 5
+        - name: drop
+          score: 5
+        - name: truncate
+          score: 5
+        - name: alter
+          score: 5
+        - name: exec
+          score: 5
+        - name: execute
+          score: 5
+        - name: declare
+          score: 5
+        - name: from
+          score: 5
+        - name: where
+          score: 5
+        - name: information_schema
+          score: 5
+        - name: group_concat
+          score: 5
+        - name: load_file
+          score: 5
+        - name: xp_cmdshell
+          score: 5
+        - name: waitfor
+          score: 5
+        - name: benchmark
+          score: 5
+        - name: sleep
+          score: 5
+        - name: having
+          score: 5
+        - name: concat
+          score: 5
+        - name: or
+          score: 5
+        - name: and
+          score: 5
+    functions:
+      policy_id: 10010
+      items:
+        - name: sleep(
+          score: 3
+        - name: benchmark(
+          score: 3
+        - name: load_file(
+          score: 3
+        - name: group_concat(
+          score: 3
+        - name: database(
+          score: 3
+        - name: version(
+          score: 3
+        - name: user(
+          score: 3
+        - name: '@@version'
+          score: 3
+        - name: updatexml(
+          score: 3
+        - name: extractvalue(
+          score: 3
+        - name: floor(rand(
+          score: 3
+    stacked_starters:
+      policy_id: 10011
+      items:
+        - name: select
+          score: 5
+        - name: insert
+          score: 5
+        - name: update
+          score: 5
+        - name: delete
+          score: 5
+        - name: drop
+          score: 5
+        - name: exec
+          score: 5
+        - name: declare
+          score: 5
+        - name: truncate
+          score: 5
+        - name: alter
+          score: 5
+        - name: grant
+          score: 5
+    cluster_min_keywords: 2
+  xss:
+    enabled: true
+    dangerous_tags:
+      policy_id: 10020
+      items:
+        - name: script
+          score: 3
+        - name: iframe
+          score: 3
+        - name: object
+          score: 3
+        - name: embed
+          score: 3
+        - name: svg
+          score: 3
+        - name: math
+          score: 3
+        - name: form
+          score: 3
+        - name: meta
+          score: 3
+        - name: link
+          score: 3
+        - name: base
+          score: 3
+    event_tags:
+      policy_id: 10021
+      items:
+        - name: img
+          score: 5
+        - name: svg
+          score: 5
+        - name: body
+          score: 5
+        - name: input
+          score: 5
+        - name: details
+          score: 5
+        - name: marquee
+          score: 5
+        - name: video
+          score: 5
+        - name: audio
+          score: 5
+        - name: image
+          score: 5
+        - name: select
+          score: 5
+    js_primitives:
+      policy_id: 10022
+      items:
+        - name: document.cookie
+          score: 3
+        - name: document.write
+          score: 3
+        - name: window.location
+          score: 3
+        - name: eval(
+          score: 3
+        - name: alert(
+          score: 3
+        - name: prompt(
+          score: 3
+        - name: confirm(
+          score: 3
+        - name: .innerhtml
+          score: 3
+        - name: fromcharcode
+          score: 3
+    event_min_len: 2
+  path_traversal:
+    enabled: true
+    sequences:
+      policy_id: 10030
+      items:
+        - name: ../
+          score: 5
+        - name: ..\
+          score: 5
+        - name: ..;/
+          score: 5
+    sensitive_files:
+      policy_id: 10031
+      items:
+        - name: etc/passwd
+          score: 5
+        - name: etc/shadow
+          score: 5
+        - name: etc/hosts
+          score: 5
+        - name: proc/self
+          score: 5
+        - name: proc/version
+          score: 5
+        - name: boot.ini
+          score: 5
+        - name: win.ini
+          score: 5
+        - name: windows/system32
+          score: 5
+        - name: web-inf/
+          score: 5
+        - name: .ssh/
+          score: 5
+        - name: .aws/credentials
+          score: 5
+        - name: .env
+          score: 5
+        - name: id_rsa
+          score: 5
+    wrappers:
+      policy_id: 10032
+      items:
+        - name: php://
+          score: 4
+        - name: file://
+          score: 4
+        - name: expect://
+          score: 4
+        - name: zip://
+          score: 4
+        - name: phar://
+          score: 4
+        - name: glob://
+          score: 4
+        - name: data://
+          score: 4
+  command_injection:
+    enabled: true
+    commands:
+      policy_id: 10040
+      items:
+        - name: whoami
+          score: 5
+        - name: uname
+          score: 5
+        - name: cat
+          score: 5
+        - name: ls
+          score: 5
+        - name: pwd
+          score: 5
+        - name: id
+          score: 5
+        - name: curl
+          score: 5
+        - name: wget
+          score: 5
+        - name: nc
+          score: 5
+        - name: ncat
+          score: 5
+        - name: netcat
+          score: 5
+        - name: bash
+          score: 5
+        - name: sh
+          score: 5
+        - name: zsh
+          score: 5
+        - name: cmd
+          score: 5
+        - name: powershell
+          score: 5
+        - name: ping
+          score: 5
+        - name: nslookup
+          score: 5
+        - name: chmod
+          score: 5
+        - name: chown
+          score: 5
+        - name: rm
+          score: 5
+        - name: kill
+          score: 5
+        - name: python
+          score: 5
+        - name: python3
+          score: 5
+        - name: perl
+          score: 5
+        - name: ruby
+          score: 5
+        - name: php
+          score: 5
+        - name: telnet
+          score: 5
+        - name: ftp
+          score: 5
+        - name: scp
+          score: 5
+        - name: base64
+          score: 5
+    substitutions:
+      policy_id: 10041
+      items:
+        - name: $(
+          score: 4
+        - name: '`'
+          score: 4
+        - name: ${
+          score: 4
+  rfi:
+    enabled: true
+    params:
+      policy_id: 10050
+      items:
+        - name: page
+          score: 5
+        - name: file
+          score: 5
+        - name: url
+          score: 5
+        - name: path
+          score: 5
+        - name: include
+          score: 5
+        - name: inc
+          score: 5
+        - name: doc
+          score: 5
+        - name: document
+          score: 5
+        - name: folder
+          score: 5
+        - name: root
+          score: 5
+        - name: pg
+          score: 5
+        - name: style
+          score: 5
+        - name: template
+          score: 5
+        - name: php_path
+          score: 5
+        - name: load
+          score: 5
+        - name: src
+          score: 5
+        - name: view
+          score: 5
+        - name: content
+          score: 5
+    schemes:
+      policy_id: 10051
+      items:
+        - name: http://
+          score: 5
+        - name: https://
+          score: 5
+        - name: ftp://
+          score: 5
+custom_rules:
+  - policy_id: 9001
+    name: WordPress admin probe
+    pattern: (?i)wp-(admin|login|content)
+    option:
+      header: true
+      body: false
+      uri: true
+    score: 5
+  - policy_id: 9002
+    name: Log4Shell JNDI lookup
+    pattern: '\$\{jndi:(ldap|rmi|dns|iiop|corba|nds|nis):'
+    option:
+      header: true
+      body: true
+      uri: true
+    score: 5
+  - policy_id: 9003
+    name: Scanner user agents
+    pattern: (?i)(sqlmap|nikto|acunetix|nessus|masscan|nmap|wpscan)
+    option:
+      header: true
+      body: false
+      uri: true
+    score: 5
+  - policy_id: 9004
+    name: BlockContains Dwiyan
+    pattern: Dwiyan
+    option:
+      header: true
+      body: true
+      uri: true
+    score: 5

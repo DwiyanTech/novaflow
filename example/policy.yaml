@@ -1,29 +1,144 @@
-policy_block:
- - policy_id: 1001
-   name: "XSS Attack Malicious Keyword"
-   pattern: "(?i)on(blur|change|click|focus|keydown|keypress|keyup|load|mouse(down|up|over|out|move)|reset|select|submit|unload)\\s*="
-   option:
-    header: true
-    body: true
-    uri: true
- - policy_id: 1002
-   name: "XSS Attack"
-   pattern: "(?i)<script[^>]*>"
-   option:
-    header: true
-    body: true
-    uri: true
- - policy_id: 1003
-   name: "SQL Injection"
-   pattern: "(?i)(SELECT|INSERT|UPDATE|DELETE|UNION|DROP|TRUNCATE|ALTER|EXEC|DECLARE)"
-   option:
-    header: true
-    body: true
-    uri: true
- - policy_id: 1004
-   name: "Local File Inclusions on Sensitive Files"
-   pattern: "(?i)(etc/passwd|boot.ini|win.ini)"
-   option:
-    header: true
-    body: true
-    uri: true
+# Novaflow WAF policy — the ENTIRE detection algorithm lives here.
+#
+# Every keyword, tag, command, function, starter, sequence, file, wrapper,
+# parameter and scheme is a scored item. The engine adds each item's score
+# to the anomaly total when it matches.
+#
+# Each rule list uses the structured form:
+#   policy_id: <id>      # exposed in logs/tracing for this list
+#   items:                # scored rules belonging to this list
+#     - name: select
+#       score: 2
+#
+# For backward compatibility a plain array is still accepted; the engine will
+# assign the default policy_id for that list.
+
+detection:
+  mode: block
+  anomaly_threshold: 5
+  max_body_bytes: 1048576
+
+rules:
+  sqli:
+    enabled: true
+    keywords:
+      policy_id: 1009
+      items:
+        - name: select
+          score: 2
+        - name: union
+          score: 3
+        - name: insert
+          score: 5
+        - name: update
+          score: 5
+        - name: delete
+          score: 5
+        - name: drop
+          score: 5
+        - name: or
+          score: 5
+        - name: and
+          score: 5
+    functions:
+      policy_id: 10010
+      items:
+        - name: "sleep("
+          score: 5
+        - name: "benchmark("
+          score: 5
+    stacked_starters:
+      policy_id: 10011
+      items:
+        - name: select
+          score: 5
+        - name: insert
+          score: 5
+    cluster_min_keywords: 2
+
+  xss:
+    enabled: true
+    dangerous_tags:
+      policy_id: 10020
+      items:
+        - name: script
+          score: 5
+        - name: iframe
+          score: 3
+    event_tags:
+      policy_id: 10021
+      items:
+        - name: img
+          score: 5
+        - name: svg
+          score: 5
+    js_primitives:
+      policy_id: 10022
+      items:
+        - name: "eval("
+          score: 5
+        - name: "alert("
+          score: 5
+    event_min_len: 2
+
+  path_traversal:
+    enabled: true
+    sequences:
+      policy_id: 10030
+      items:
+        - name: "../"
+          score: 5
+    sensitive_files:
+      policy_id: 10031
+      items:
+        - name: etc/passwd
+          score: 5
+    wrappers:
+      policy_id: 10032
+      items:
+        - name: "php://"
+          score: 4
+
+  command_injection:
+    enabled: true
+    commands:
+      policy_id: 10040
+      items:
+        - name: whoami
+          score: 5
+        - name: cat
+          score: 5
+    substitutions:
+      policy_id: 10041
+      items:
+        - name: "$("
+          score: 4
+        - name: "`"
+          score: 4
+
+  rfi:
+    enabled: true
+    params:
+      policy_id: 10050
+      items:
+        - name: page
+          score: 5
+        - name: file
+          score: 5
+    schemes:
+      policy_id: 10051
+      items:
+        - name: "http://"
+          score: 5
+        - name: "https://"
+          score: 5
+
+custom_rules:
+  - policy_id: 9001
+    name: "WordPress admin probe"
+    pattern: "(?i)wp-(admin|login|content)"
+    score: 5
+    option:
+      uri: true
+      header: false
+      body: false

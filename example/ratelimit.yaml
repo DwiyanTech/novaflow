@@ -1,0 +1,42 @@
+enabled: true
+backend: memory
+redis:
+  url: ''
+  timeout_seconds: 2
+  connection_timeout_seconds: 5
+rules:
+  - name: global per-ip
+    by:
+      - ip
+    paths: []
+    requests_per_second: 100
+    requests_per_minute: null
+    burst: 150
+    window_seconds: null
+    anomaly_score: null
+    action: block
+    block_ttl_seconds: 600
+  - name: login brute force
+    by:
+      - ip
+      - path
+    paths:
+      - /login
+    requests_per_second: null
+    requests_per_minute: 10
+    burst: 20
+    window_seconds: null
+    anomaly_score: null
+    action: block
+    block_ttl_seconds: 1800
+  - name: scan detection
+    by:
+      - ip
+    paths: []
+    requests_per_second: null
+    requests_per_minute: null
+    burst: null
+    window_seconds: 60
+    anomaly_score: 50
+    action: alert
+    block_ttl_seconds: 600

@@ -1,0 +1,16 @@
+enabled: false
+database_path: data/GeoLite2-Country.mmdb
+cache_size: 100000
+cache_ttl_seconds: 3600
+mode: blacklist
+allow_countries: []
+block_countries: []
+allow_asns: []
+block_asns: []
+# Optional automatic MMDB download on startup.
+# auto_download:
+#   enabled: true
+#   url: https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&suffix=tar.gz
+#   license_key: "${MAXMIND_LICENSE_KEY}"
+#   output_path: data/GeoLite2-Country.mmdb
+#   refresh_days: 7

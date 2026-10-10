@@ -1,9 +1,5 @@
-
 use http_body_util::Full;
-use hyper::{
-    body::Bytes,
-    HeaderMap,  Response,
-};
+use hyper::{body::Bytes, HeaderMap, Response};
 
 pub async fn convert_reqwest_to_hyper_response(
     reqwest_resp: reqwest::Response,
